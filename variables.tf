@@ -71,7 +71,7 @@ variable "private_subnet_name" {
 variable "route_name" {
   description = "Name of the route for the webapp subnet"
   type        = string
-  default     = "webapp-internet-gateway-route"
+  default     = "internet-gateway-route"
 }
 
 variable "webapp_internet_gateway_route_dest" {
