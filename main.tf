@@ -8,14 +8,14 @@ resource "google_compute_network" "vpc_network" {
 
 resource "google_compute_subnetwork" "webapp" {
   count         = var.num_vpcs
-  name          =count.index == 0 ? var.public_subnet_name : "${var.public_subnet_name}-${uuid()}"
+  name          = count.index == 0 ? var.public_subnet_name : "${var.public_subnet_name}-${uuid()}"
   ip_cidr_range = cidrsubnet(var.vpc_cidr_range, 8, count.index + 1)
   network       = google_compute_network.vpc_network[count.index].name
 }
 
 resource "google_compute_subnetwork" "db" {
   count         = var.num_vpcs
-  name          =count.index == 0 ? var.private_subnet_name : "${var.private_subnet_name}-${uuid()}"
+  name          = count.index == 0 ? var.private_subnet_name : "${var.private_subnet_name}-${uuid()}"
   ip_cidr_range = cidrsubnet(var.vpc_cidr_range, 8, count.index + 128)
   network       = google_compute_network.vpc_network[count.index].name
 }
