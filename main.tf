@@ -4,7 +4,7 @@ resource "google_compute_network" "vpc_network" {
   auto_create_subnetworks         = var.vpc_auto_create_subnetworks_false
   routing_mode                    = var.vpc_routing_mode_regional
   delete_default_routes_on_create = var.vpc_delete_default_routes_on_create_true
-}
+
 
 resource "google_compute_subnetwork" "webapp" {
   count         = var.num_vpcs
