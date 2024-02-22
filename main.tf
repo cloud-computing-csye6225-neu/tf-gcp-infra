@@ -46,7 +46,7 @@ resource "google_compute_firewall" "allow_rule" {
 
 resource "google_compute_firewall" "deny_rule" {
   name    = var.deny_firewall_name
-  network = google_compute_network.my_vpc_network.self_link
+  network = google_compute_network.vpc_network
 
   deny {
     protocol = var.deny_protocol
@@ -70,7 +70,7 @@ resource "google_compute_instance" "custom_vm_instance" {
   }
 
   network_interface {
-    network    = google_compute_network.my_vpc_network.self_link
+    network    = google_compute_network.vpc_network
     subnetwork = google_compute_subnetwork.webapp.self_link
 
     access_config {
