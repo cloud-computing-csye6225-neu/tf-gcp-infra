@@ -120,7 +120,7 @@ variable "firewall_src_range" {
 }
 
 variable "deny_firewall_name" {
- type=string 
+  type = string
 }
 variable "deny_protocol" {
   type = string
