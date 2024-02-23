@@ -33,20 +33,22 @@ resource "google_compute_route" "internet_gateway_route" {
 }
 
 resource "google_compute_firewall" "allow_rule" {
-  name    = var.allow_firewall_name
-  network = google_compute_network.vpc_network
-
+  name        = var.allow_firewall_name
+  network     = google_compute_network.vpc_network.name
+  source_tags = var.vm_tag
+  target_tags = var.vm_tag
   allow {
     protocol = var.allow_protocol
     ports    = var.allowed_port_list
   }
 
   source_ranges = var.firewall_src_range
+  priority      = var.allow_firewall_rule_priority
 }
 
 resource "google_compute_firewall" "deny_rule" {
   name    = var.deny_firewall_name
-  network = google_compute_network.vpc_network
+  network = google_compute_network.vpc_network.name
 
   deny {
     protocol = var.deny_protocol
@@ -60,7 +62,7 @@ resource "google_compute_instance" "custom_vm_instance" {
   name         = var.vm_instance_name
   zone         = var.vm_instance_zone
   machine_type = var.vm_instance_machine_type
-
+  tags         = var.vm_tag
   boot_disk {
     initialize_params {
       image = var.vm_instance_image
@@ -70,7 +72,7 @@ resource "google_compute_instance" "custom_vm_instance" {
   }
 
   network_interface {
-    network    = google_compute_network.vpc_network
+    network    = google_compute_network.vpc_network.name
     subnetwork = google_compute_subnetwork.webapp.self_link
 
     access_config {

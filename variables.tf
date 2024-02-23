@@ -152,3 +152,10 @@ variable "vm_instance_disk_type" {
 variable "vm_instance_disk_size_gb" {
   type = number
 }
+variable "vm_tag" {
+  type = list(string)
+}
+
+variable "allow_firewall_rule_priority" {
+  type = number
+}
