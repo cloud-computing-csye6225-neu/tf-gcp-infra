@@ -52,7 +52,6 @@ resource "google_compute_firewall" "deny_rule" {
 
   deny {
     protocol = var.deny_protocol
-    ports    = var.deny_ports
   }
 
   source_ranges = var.firewall_src_range
