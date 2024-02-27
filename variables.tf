@@ -160,112 +160,112 @@ variable "allow_firewall_rule_priority" {
   type = number
 }
 variable "sql_instance_name" {
-  type = string
-  default = "DB-Instance"
+  type    = string
+  default = "main-instance"
 }
 
 variable "database_version" {
-  type = string
+  type    = string
   default = "MYSQL_5_7"
 }
 
 variable "database_instance_tier" {
-  type = string
+  type    = string
   default = "db-f1-micro"
 }
 
 variable "database_instance_availability_type" {
-  type = string
+  type    = string
   default = "REGIONAL"
 }
 
 variable "database_instance_disk_size" {
- type = number
- default = 100 
+  type    = number
+  default = 100
 }
 
 variable "database_instance_disk_type" {
-  type = string
+  type    = string
   default = "pd-ssd"
 }
 
 variable "database_instance_IPV4_enabled" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "database_instance_deletion_protection" {
-  type = bool
+  type    = bool
   default = false
 }
 variable "backup_configuration_enabled" {
-  type = bool
-  default = true   
+  type    = bool
+  default = true
 }
 variable "private_vpc_connection_service" {
-  type = string
+  type    = string
   default = "servicenetworking.googleapis.com"
 }
 
 variable "backup_configuration_binary_log_enabled" {
-  type = bool
+  type    = bool
   default = true
 }
 
 variable "google_sql_database_webapp_name" {
-  type = string
+  type    = string
   default = "webapp"
-  }
+}
 
 variable "google_sql_user_webapp_name" {
-  type = string
+  type    = string
   default = "webapp"
 }
 
 variable "password_restriction_length" {
-  type = number
+  type    = number
   default = 16
 }
 
 variable "password_restriction_special_characters_allowed" {
-  type = bool
+  type    = bool
   default = true
 }
 
 variable "password_restriction_override_special" {
-  type = string
+  type    = string
   default = "!#%*()-_+[]{}<>:?"
 }
 
 variable "private_ip_block_name" {
-  type = string
+  type    = string
   default = "private-ip-block"
 }
 
 variable "private_ip_block_purpose" {
-  type = string
+  type    = string
   default = "VPC_PEERING"
 }
 
 variable "private_ip_block_address_type" {
-  type = string
+  type    = string
   default = "INTERNAL"
 }
 variable "private_ip_block_ip_version" {
-  type = string
+  type    = string
   default = "IPV4"
 }
 
 variable "private_ip_block_prefix_length" {
-  type = number
+  type    = number
   default = 20
 }
 variable "properties_location" {
-  type = string
+  type    = string
   default = "/home/csye6225/"
 }
 
 variable "subnet_webapp_private_ip_google_access" {
-  type = bool
+  type    = bool
   default = true
 }
