@@ -11,4 +11,6 @@ echo "spring.datasource.hikari.connection-timeout=2000" >> application.propertie
 echo "logging.level.org.springframework.validation=DEBUG" >> application.properties
 echo "spring.jackson.deserialization.fail-on-unknown-properties=true" >> application.properties
 
+sudo chown csye6225: application.properties
 sudo mv application.properties ${location}
+sudo systemctl daemon-reload
