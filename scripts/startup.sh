@@ -14,3 +14,4 @@ echo "spring.jackson.deserialization.fail-on-unknown-properties=true" >> applica
 sudo chown csye6225: application.properties
 sudo mv application.properties ${location}
 sudo systemctl daemon-reload
+sudo systemctl restart csye6225
