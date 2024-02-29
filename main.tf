@@ -75,6 +75,7 @@ resource "google_compute_instance" "custom_vm_instance" {
   zone         = var.vm_instance_zone
   machine_type = var.vm_instance_machine_type
   tags         = var.vm_tag
+  depends_on = [google_sql_database_instance.main_primary]
   boot_disk {
     initialize_params {
       image = var.vm_instance_image
