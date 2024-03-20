@@ -269,3 +269,18 @@ variable "subnet_webapp_private_ip_google_access" {
   type    = bool
   default = true
 }
+
+variable "serviceAccountId" {
+  type    = string
+  default = "dev-444"
+}
+
+variable "ServiceAccountName" {
+  type    = string
+  default = "customserviceaccountname"
+}
+
+variable "projectId" {
+  type    = string
+  default = "csye6225-414819"
+}
