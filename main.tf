@@ -75,7 +75,7 @@ resource "google_compute_instance" "custom_vm_instance" {
   zone         = var.vm_instance_zone
   machine_type = var.vm_instance_machine_type
   tags         = var.vm_tag
-  depends_on = [google_service_account.vm_service_account, google_sql_database_instance.main_primary]
+  depends_on   = [google_service_account.vm_service_account, google_sql_database_instance.main_primary]
   boot_disk {
     initialize_params {
       image = var.vm_instance_image
@@ -93,7 +93,7 @@ resource "google_compute_instance" "custom_vm_instance" {
     }
   }
   metadata_startup_script = data.template_file.startup_script.rendered
-    service_account {
+  service_account {
     email  = google_service_account.vm_service_account.email
     scopes = ["cloud-platform"]
   }
