@@ -75,7 +75,7 @@ resource "google_compute_instance" "custom_vm_instance" {
   zone         = var.vm_instance_zone
   machine_type = var.vm_instance_machine_type
   tags         = var.vm_tag
-  depends_on   = [google_sql_database_instance.main_primary]
+  depends_on = [google_service_account.vm_service_account, google_sql_database_instance.main_primary]
   boot_disk {
     initialize_params {
       image = var.vm_instance_image
@@ -93,8 +93,40 @@ resource "google_compute_instance" "custom_vm_instance" {
     }
   }
   metadata_startup_script = data.template_file.startup_script.rendered
+    service_account {
+    email  = google_service_account.vm_service_account.email
+    scopes = ["cloud-platform"]
+  }
 }
 
+resource "google_service_account" "vm_service_account" {
+  account_id                   = "vm-instance-service-account"
+  display_name                 = "VM Service Account"
+  create_ignore_already_exists = true
+}
+
+resource "google_project_iam_binding" "logging_roles_binding" {
+  project = var.projectId
+
+  role = "roles/logging.admin"
+
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}",
+  ]
+  depends_on = [google_service_account.vm_service_account]
+}
+
+resource "google_project_iam_binding" "metric_roles_binding" {
+  project = var.projectId
+
+  role = "roles/monitoring.metricWriter"
+
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}",
+  ]
+
+  depends_on = [google_service_account.vm_service_account]
+}
 # Create a private address range for our network
 resource "google_compute_global_address" "private_ip_block" {
   name          = var.private_ip_block_name
@@ -147,4 +179,21 @@ resource "google_sql_user" "db_user" {
   name     = var.google_sql_user_webapp_name
   instance = google_sql_database_instance.main_primary.name
   password = random_password.password.result
+}
+
+data "google_dns_managed_zone" "env_dns_zone" {
+  name = "srivijaykalki"
+
+}
+
+resource "google_dns_record_set" "a_dns_record" {
+  name         = data.google_dns_managed_zone.env_dns_zone.dns_name
+  managed_zone = data.google_dns_managed_zone.env_dns_zone.name
+  type         = "A"
+  ttl          = 60
+  rrdatas = [
+    google_compute_instance.custom_vm_instance.network_interface[0].access_config[0].nat_ip
+  ]
+
+  depends_on = [google_compute_instance.custom_vm_instance]
 }
