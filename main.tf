@@ -67,7 +67,9 @@ data "template_file" "startup_script" {
     DB_USERNAME            = var.google_sql_user_webapp_name,
     DB_PASSWORD            = "${random_password.password.result}",
     DB_NAME                = var.google_sql_database_webapp_name,
-    location               = var.properties_location
+    location               = var.properties_location,
+    PROJECT_ID             = var.projectId,
+    TOPIC_ID               = google_pubsub_topic.verify_email.name
   }
 }
 resource "google_compute_instance" "custom_vm_instance" {
@@ -143,6 +145,13 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   reserved_peering_ranges = [google_compute_global_address.private_ip_block.name]
 }
 
+resource "google_vpc_access_connector" "serverless_vpc_connector" {
+  name          = var.serverless_vpc_connector_name
+  network       = google_compute_network.vpc_network.self_link
+  region        = var.region
+  ip_cidr_range = var.serverless_vpc_connector_ip_cidr_range
+}
+
 resource "google_sql_database" "webapp" {
   name     = var.google_sql_database_webapp_name
   instance = google_sql_database_instance.main_primary.name
@@ -182,7 +191,7 @@ resource "google_sql_user" "db_user" {
 }
 
 data "google_dns_managed_zone" "env_dns_zone" {
-  name = "srivijaykalki"
+  name = var.env_dns_zone_name.name
 
 }
 
@@ -197,3 +206,69 @@ resource "google_dns_record_set" "a_dns_record" {
 
   depends_on = [google_compute_instance.custom_vm_instance]
 }
+# A pub-sub topic for sending email verification
+resource "google_pubsub_topic" "verify_email" {
+  name                       = var.email_verification_topic_ttl
+  message_retention_duration = var.email_verification_topic_ttl
+}
+
+resource "google_pubsub_topic_iam_binding" "topic_publisher_binding" {
+  topic = google_pubsub_topic.verify_email.name
+  role  = "roles/pubsub.publisher"
+
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}"
+  ]
+}
+resource "google_storage_bucket" "function_code_bucket" {
+  name     = var.google_storage_bucket_name.name
+  location = var.region
+}
+
+resource "google_storage_bucket_object" "function_code_objects" {
+  name   = var.google_storage_bucket_object_name
+  bucket = google_storage_bucket.function_code_bucket.name
+  source = var.google_storage_bucket_object_source_path
+}
+
+resource "google_cloudfunctions_function" "email_verification_function" {
+  name        = var.email_verification_function
+  runtime     = var.email_verification_function_run_time
+  entry_point = var.email_verification_function_entry_point
+
+  available_memory_mb = var.email_verification_function_available_memory
+
+  source_archive_bucket = google_storage_bucket.function_code_bucket.name
+  source_archive_object = google_storage_bucket_object.function_code_objects.name
+
+  event_trigger {
+    event_type = "google.pubsub.topic.publish"
+    resource   = google_pubsub_topic.verify_email.name
+  }
+
+  # Cloud Function environment variables for SQL connection
+  environment_variables = {
+    SQL_HOST             = google_sql_database_instance.main_primary.private_ip_address
+    SQL_USERNAME         = google_sql_user.db_user.name
+    SQL_PASSWORD         = random_password.password.result
+    SQL_DATABASE         = google_sql_database.webapp.name
+    MAIL_GUN_DOMAIN_NAME = var.mailgun_domain_name
+    MAIL_GUN_API_KEY     = var.mailgun_api_key
+  }
+
+  # Ensure Cloud Function is deployed in the same region as the SQL instance
+  region = google_sql_database_instance.main_primary.region
+
+  vpc_connector = google_vpc_access_connector.serverless_vpc_connector.name
+
+}
+
+resource "google_cloudfunctions_function_iam_member" "allow_access_tff" {
+  project        = google_cloudfunctions_function.email_verification_function.project
+  region         = google_cloudfunctions_function.email_verification_function.region
+  cloud_function = google_cloudfunctions_function.email_verification_function.name
+
+  role   = "roles/cloudfunctions.invoker"
+  member = "allUsers"
+}
+

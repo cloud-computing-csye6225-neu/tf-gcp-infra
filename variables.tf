@@ -284,3 +284,71 @@ variable "projectId" {
   type    = string
   default = "csye6225-414819"
 }
+
+variable "mailgun_domain_name" {
+  type    = string
+  default = "srivijaykalki.me"
+}
+
+variable "mailgun_api_key" {
+  type = string
+}
+
+variable "serverless_vpc_connector_name" {
+  type    = string
+  default = "serverless-vpc-connector"
+}
+
+variable "serverless_vpc_connector_ip_cidr_range" {
+  type    = string
+  default = "10.8.0.0/28"
+}
+
+variable "env_dns_zone_name" {
+  type    = string
+  default = "srivijaykalki"
+}
+
+variable "emailVerification_topic_name" {
+  type    = string
+  default = "verify_email"
+}
+
+variable "email_verification_topic_ttl" {
+  type    = string
+  default = "604800s"
+}
+
+variable "google_storage_bucket_name" {
+  type    = string
+  default = "bucket_code_vijaycl"
+}
+
+variable "google_storage_bucket_object_name" {
+  type    = string
+  default = "serverlessCode"
+}
+variable "google_storage_bucket_object_source_path" {
+  type    = string
+  default = "function-source.zip"
+}
+
+variable "email_verification_function" {
+  type    = string
+  default = "emailVerification"
+}
+
+variable "email_verification_function_run_time" {
+  type    = string
+  default = "java17"
+}
+
+variable "email_verification_function_entry_point" {
+  type    = string
+  default = "gcfv2pubsub.PubSubFunction"
+}
+
+variable "email_verification_function_available_memory" {
+  type    = number
+  default = 128
+}
