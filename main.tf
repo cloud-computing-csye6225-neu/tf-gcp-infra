@@ -191,7 +191,7 @@ resource "google_sql_user" "db_user" {
 }
 
 data "google_dns_managed_zone" "env_dns_zone" {
-  name = var.env_dns_zone_name.name
+  name = var.env_dns_zone_name
 
 }
 
