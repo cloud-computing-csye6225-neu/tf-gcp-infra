@@ -70,6 +70,8 @@ data "template_file" "startup_script" {
     location               = var.properties_location,
     PROJECT_ID             = var.projectId,
     TOPIC_ID               = google_pubsub_topic.verify_email.name
+    DOMAIN_NAME            = var.domain_name
+    SERVER_PORT            = var.server_port
   }
 }
 resource "google_compute_instance" "custom_vm_instance" {
@@ -208,7 +210,7 @@ resource "google_dns_record_set" "a_dns_record" {
 }
 # A pub-sub topic for sending email verification
 resource "google_pubsub_topic" "verify_email" {
-  name                       = var.email_verification_topic_ttl
+  name                       = var.email_verification_topic_name
   message_retention_duration = var.email_verification_topic_ttl
 }
 
@@ -220,6 +222,7 @@ resource "google_pubsub_topic_iam_binding" "topic_publisher_binding" {
     "serviceAccount:${google_service_account.vm_service_account.email}"
   ]
 }
+
 resource "google_storage_bucket" "function_code_bucket" {
   name     = var.google_storage_bucket_name
   location = var.region

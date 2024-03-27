@@ -309,7 +309,7 @@ variable "env_dns_zone_name" {
   default = "srivijaykalki"
 }
 
-variable "emailVerification_topic_name" {
+variable "email_verification_topic_name" {
   type    = string
   default = "verify_email"
 }
@@ -350,5 +350,15 @@ variable "email_verification_function_entry_point" {
 
 variable "email_verification_function_available_memory" {
   type    = number
-  default = 128
+  default = 256
+}
+
+variable "domain_name" {
+  type    = string
+  default = "srivijaykalki.me"
+}
+
+variable "server_port" {
+  type    = number
+  default = 8080
 }
