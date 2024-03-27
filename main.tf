@@ -221,7 +221,7 @@ resource "google_pubsub_topic_iam_binding" "topic_publisher_binding" {
   ]
 }
 resource "google_storage_bucket" "function_code_bucket" {
-  name     = var.google_storage_bucket_name.name
+  name     = var.google_storage_bucket_name
   location = var.region
 }
 
