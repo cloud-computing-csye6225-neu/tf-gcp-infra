@@ -214,15 +214,6 @@ resource "google_pubsub_topic" "verify_email" {
   message_retention_duration = var.email_verification_topic_ttl
 }
 
-resource "google_pubsub_topic_iam_binding" "topic_publisher_binding" {
-  topic = google_pubsub_topic.verify_email.name
-  role  = "roles/pubsub.publisher"
-
-  members = [
-    "serviceAccount:${google_service_account.vm_service_account.email}"
-  ]
-}
-
 resource "google_storage_bucket" "function_code_bucket" {
   name     = var.google_storage_bucket_name
   location = var.region
@@ -234,44 +225,95 @@ resource "google_storage_bucket_object" "function_code_objects" {
   source = var.google_storage_bucket_object_source_path
 }
 
-resource "google_cloudfunctions_function" "email_verification_function" {
-  name        = var.email_verification_function
-  runtime     = var.email_verification_function_run_time
-  entry_point = var.email_verification_function_entry_point
+resource "google_service_account" "function_service_account" {
+  account_id   = var.cloudfunction_account_id
+  display_name = var.cloudfunction_display_name
+}
+resource "google_project_iam_binding" "function_service_account_roles" {
+  project = var.projectId
+  role    = "roles/iam.serviceAccountTokenCreator"
 
-  available_memory_mb = var.email_verification_function_available_memory
+  members = [
+    "serviceAccount:${google_service_account.function_service_account.email}"
+  ]
+}
 
-  source_archive_bucket = google_storage_bucket.function_code_bucket.name
-  source_archive_object = google_storage_bucket_object.function_code_objects.name
+resource "google_project_iam_binding" "invoker_binding" {
+  members = ["serviceAccount:${google_service_account.function_service_account.email}"]
+  project = var.projectId
+  role    = "roles/run.invoker"
+}
 
-  event_trigger {
-    event_type = "google.pubsub.topic.publish"
-    resource   = google_pubsub_topic.verify_email.name
+resource "google_cloudfunctions2_function" "email_verification_function" {
+  name     = var.email_verification_function
+  location = var.region
+
+  build_config {
+    runtime     = var.email_verification_function_run_time
+    entry_point = var.email_verification_function_entry_point
+
+    source {
+      storage_source {
+        bucket = google_storage_bucket.function_code_bucket.name
+        object = google_storage_bucket_object.function_code_objects.name
+      }
+    }
   }
 
-  # Cloud Function environment variables for SQL connection
-  environment_variables = {
+  service_config {
+    max_instance_count            = var.max_instance_count
+    min_instance_count            = var.min_instance_count
+    available_memory              = var.available_memory
+    timeout_seconds               = var.timeout_seconds
+    vpc_connector                 = google_vpc_access_connector.serverless_vpc_connector.name
+    vpc_connector_egress_settings = var.vpc_connector_egress_settings
+
+    environment_variables = {
     SQL_HOST             = google_sql_database_instance.main_primary.private_ip_address
     SQL_USERNAME         = google_sql_user.db_user.name
     SQL_PASSWORD         = random_password.password.result
     SQL_DATABASE         = google_sql_database.webapp.name
     MAIL_GUN_DOMAIN_NAME = var.mailgun_domain_name
     MAIL_GUN_API_KEY     = var.mailgun_api_key
+    }
+
+    ingress_settings               = var.cloudfunction_ingress_settings
+    all_traffic_on_latest_revision = var.cloudfunction_all_traffic_on_latest_revision
+    service_account_email          = google_service_account.function_service_account.email
+
+
   }
-
-  # Ensure Cloud Function is deployed in the same region as the SQL instance
-  region = google_sql_database_instance.main_primary.region
-
-  vpc_connector = google_vpc_access_connector.serverless_vpc_connector.name
-
+  event_trigger {
+    trigger_region = var.region
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = google_pubsub_topic.verify_email.id
+    retry_policy   = var.eventtrigger_retry_policy
+  }
 }
 
-resource "google_cloudfunctions_function_iam_member" "allow_access_tff" {
-  project        = google_cloudfunctions_function.email_verification_function.project
-  region         = google_cloudfunctions_function.email_verification_function.region
-  cloud_function = google_cloudfunctions_function.email_verification_function.name
+resource "google_project_iam_binding" "pubsub_publisher" {
+  project = var.projectId
+  role    = "roles/pubsub.publisher"
 
-  role   = "roles/cloudfunctions.invoker"
-  member = "allUsers"
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}"
+  ]
+}
+
+resource "google_project_iam_binding" "pubsub_service_account_roles" {
+  project = var.projectId
+  role    = "roles/iam.serviceAccountTokenCreator"
+
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}"
+  ]
+}
+resource "google_pubsub_subscription" "pub_sub_subscription" {
+  name                 = var.pubsub_subscription_name
+  topic                = google_pubsub_topic.verify_email.name
+  ack_deadline_seconds = var.ack_deadline_seconds
+  expiration_policy {
+    ttl = var.ttl
+  }
 }
 
