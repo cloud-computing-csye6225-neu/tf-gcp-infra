@@ -269,12 +269,12 @@ resource "google_cloudfunctions2_function" "email_verification_function" {
     vpc_connector_egress_settings = var.vpc_connector_egress_settings
 
     environment_variables = {
-    SQL_HOST             = google_sql_database_instance.main_primary.private_ip_address
-    SQL_USERNAME         = google_sql_user.db_user.name
-    SQL_PASSWORD         = random_password.password.result
-    SQL_DATABASE         = google_sql_database.webapp.name
-    MAIL_GUN_DOMAIN_NAME = var.mailgun_domain_name
-    MAIL_GUN_API_KEY     = var.mailgun_api_key
+      SQL_HOST             = google_sql_database_instance.main_primary.private_ip_address
+      SQL_USERNAME         = google_sql_user.db_user.name
+      SQL_PASSWORD         = random_password.password.result
+      SQL_DATABASE         = google_sql_database.webapp.name
+      MAIL_GUN_DOMAIN_NAME = var.mailgun_domain_name
+      MAIL_GUN_API_KEY     = var.mailgun_api_key
     }
 
     ingress_settings               = var.cloudfunction_ingress_settings
