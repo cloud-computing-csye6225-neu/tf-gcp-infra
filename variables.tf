@@ -181,7 +181,7 @@ variable "database_instance_availability_type" {
 
 variable "database_instance_disk_size" {
   type    = number
-  default = 100
+  default = 40
 }
 
 variable "database_instance_disk_type" {
