@@ -417,3 +417,35 @@ variable "ttl" {
   description = "Pub/Sub TTL"
   type        = string
 }
+
+variable "template_name" {
+  type    = string
+  default = "appserver-template"
+}
+
+variable "instance_grp_name" {
+  type    = string
+  default = "my-instance-group-manager"
+}
+variable "check_interval_sec" {
+  type = number
+}
+variable "health_check_timeout_seconds" {
+  type = number
+}
+variable "healthy_threshold" {
+  type = number
+}
+variable "unhealthy_threshold" {
+  type = number
+}
+variable "health_check_port" {
+  type = number
+}
+variable "backendtimeout_sec" {
+  type = number
+}
+
+variable "connection_draining_timeout_sec" {
+  type = number
+}
