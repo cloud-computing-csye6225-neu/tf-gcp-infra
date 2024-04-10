@@ -417,3 +417,191 @@ variable "ttl" {
   description = "Pub/Sub TTL"
   type        = string
 }
+
+variable "template_name" {
+  type    = string
+  default = "appserver-template"
+}
+
+variable "instance_grp_name" {
+  type    = string
+  default = "my-instance-group-manager"
+}
+variable "check_interval_sec" {
+  type    = number
+  default = 300
+}
+variable "health_check_timeout_seconds" {
+  type    = number
+  default = 10
+}
+variable "healthy_threshold" {
+  type    = number
+  default = 2
+}
+variable "unhealthy_threshold" {
+  type    = number
+  default = 2
+}
+variable "health_check_port" {
+  type    = number
+  default = 8080
+}
+variable "backendtimeout_sec" {
+  type    = number
+  default = 10
+}
+
+variable "connection_draining_timeout_sec" {
+  type    = number
+  default = 300
+}
+variable "template_tags" {
+  type = list(string)
+}
+
+variable "http_named_port_name" {
+  type = string
+}
+variable "http_named_port_port" {
+  type = number
+}
+variable "base_instance_name" {
+  type = string
+}
+variable "instance_grp_target_size" {
+  type = number
+}
+variable "auto_healing_policies_initial_delay_sec" {
+  type = number
+}
+variable "autoscaler_name" {
+  type = string
+}
+variable "max_replicas" {
+  type = number
+}
+variable "min_replicas" {
+  type = number
+}
+variable "cooldown_period" {
+  type = number
+}
+variable "target_cpu_utilization" {
+  type = number
+}
+
+variable "reserved_ip_address_name" {
+  type = string
+}
+variable "http_health_check_name" {
+  type = string
+}
+variable "health_check_request_path" {
+  type = string
+}
+variable "loadbalancer_backend_service_name" {
+  type = string
+}
+variable "loadbalancer_protocol_name" {
+  type = string
+}
+variable "load_balancing_scheme" {
+  type = string
+}
+variable "loadbalancer_backend_balancing_mode" {
+  type = string
+}
+variable "compute_url_map_name" {
+  type = string
+}
+
+variable "webapp_ssl_cert_name" {
+  type = string
+}
+variable "ssl_certificate_managed_domains" {
+  type = list(string)
+}
+variable "loadbalancer_proxy_name" {
+  type = string
+}
+variable "forwarding_rule_name" {
+  type = string
+}
+variable "forwarding_rule_ip_protocol" {
+  type = string
+}
+variable "forwarding_rule_load_balancing_scheme" {
+  type = string
+}
+variable "forwarding_rule_port_range" {
+  type = string
+}
+variable "allow_rule_target_tag" {
+  type = list(string)
+}
+variable "allow_rule_health_check_name" {
+  type = string
+}
+variable "allow_rule_health_check_protocol" {
+  type = string
+}
+variable "allow_rule_health_check_direction" {
+  type = string
+}
+variable "allow_rule_health_check_source_ranges" {
+  type = list(string)
+}
+variable "allow_rule_health_check_target_tags" {
+  type = list(string)
+}
+variable "allow_lb_firewall_name" {
+  type = string
+}
+
+variable "allow_lb_firewall_protocol" {
+  type = string
+}
+
+variable "allow_lb_firewall_ports" {
+  type = list(string)
+}
+variable "allow_lb_firewall_source_ranges" {
+  type = list(string)
+}
+variable "allow_lb_firewall_source_tags" {
+  type = list(string)
+}
+
+variable "cloudsql_crypto_key_name" {
+  type = string
+}
+
+variable "cloudsql_crypto_key_rotation_period" {
+  type = string
+}
+variable "cloudsql_service_identity" {
+  type = string
+}
+variable "vm_crypto_key_name" {
+  type = string
+}
+variable "vm_crypto_key_rotation_period" {
+  type = string
+}
+
+variable "vm_crypto_key_members" {
+  type = list(string)
+}
+variable "storage_crypto_key_name" {
+  type = string
+}
+variable "storage_crypto_key_rotation_period" {
+  type = string
+}
+variable "vm_service_account_account_id" {
+  type = string
+}
+variable "vm_service_account_display_name" {
+  type = string
+}

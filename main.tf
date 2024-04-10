@@ -104,8 +104,8 @@ data "template_file" "startup_script" {
 # }
 
 resource "google_service_account" "vm_service_account" {
-  account_id                   = "vm-instance-service-account"
-  display_name                 = "VM Service Account"
+  account_id                   = var.vm_service_account_account_id
+  display_name                 = var.vm_service_account_display_name
   create_ignore_already_exists = true
 }
 
@@ -159,10 +159,11 @@ resource "google_sql_database" "webapp" {
   instance = google_sql_database_instance.main_primary.name
 }
 resource "google_sql_database_instance" "main_primary" {
-  name             = var.sql_instance_name
-  database_version = var.database_version
-  region           = var.region
-  depends_on       = [google_service_networking_connection.private_vpc_connection]
+  name                = var.sql_instance_name
+  database_version    = var.database_version
+  region              = var.region
+  depends_on          = [google_service_networking_connection.private_vpc_connection]
+  encryption_key_name = google_kms_crypto_key.cloudsql_crypto_key.id
   settings {
     tier              = var.database_instance_tier
     availability_type = var.database_instance_availability_type
@@ -202,7 +203,7 @@ resource "google_dns_record_set" "a_dns_record" {
   managed_zone = data.google_dns_managed_zone.env_dns_zone.name
   type         = "A"
   ttl          = 60
-  rrdatas      = [google_compute_global_address.load_balancer_compute_address.address]
+  rrdatas      = [google_compute_global_address.load_balancer_address.address]
   depends_on   = [google_compute_global_forwarding_rule.https_forwarding_rule]
 }
 # A pub-sub topic for sending email verification
@@ -214,6 +215,11 @@ resource "google_pubsub_topic" "verify_email" {
 resource "google_storage_bucket" "function_code_bucket" {
   name     = var.google_storage_bucket_name
   location = var.region
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.storage_crypto_key.id
+  }
+  depends_on = [google_kms_crypto_key_iam_binding.binding]
+
 }
 
 resource "google_storage_bucket_object" "function_code_objects" {
@@ -313,243 +319,8 @@ resource "google_pubsub_subscription" "pub_sub_subscription" {
     ttl = var.ttl
   }
 }
-
-# resource "google_compute_region_instance_template" "default" {
-#   name        = "appserver-template"
-#   description = "This template is used to create app server instances."
-#   depends_on   = [google_service_account.vm_service_account, google_sql_database_instance.main_primary]
-#   tags         = ["allow-health-check","my-vm-tag"]
-#     // Create a new boot disk from an image
-#   region = var.region
-#   disk {
-#     source_image      = var.vm_instance_image
-#     auto_delete       = true
-#     boot              = true
-#     disk_type  = var.vm_instance_disk_type
-#     disk_size_gb  = var.vm_instance_disk_size_gb
-#   }
-#   machine_type = var.vm_instance_machine_type
-#   network_interface {
-#     network    = google_compute_network.vpc_network.name
-#     subnetwork = google_compute_subnetwork.webapp.self_link
-
-#     access_config {
-#       // Assigns a public IP address
-#     }
-#   }
-#     metadata_startup_script = data.template_file.startup_script.rendered
-#     service_account {
-#     email  = google_service_account.vm_service_account.email
-#     scopes = ["cloud-platform"]
-#   }
-# }
-
-# # resource "google_compute_region_health_check" "autohealing" {
-# #   name                = "autohealing-health-check"
-# #   check_interval_sec  = 5
-# #   timeout_sec         = 5
-# #   healthy_threshold   = 2
-# #   unhealthy_threshold = 10 # 50 seconds
-
-# #   http_health_check {
-# #     request_path = "/healthz"
-# #     port         = "8080"
-# #   }
-# # }
-
-# resource "google_compute_http_health_check" "http_health_check" {
-#   name                = "http-health-check"
-#   check_interval_sec  = 60
-#   timeout_sec         = 5
-#   healthy_threshold   = 2
-#   unhealthy_threshold = 2
-#   port                = 8080
-#   request_path        = "/healthz"
-# }
-
-# resource "google_compute_region_instance_group_manager" "appserver" {
-#   name = "appserver-igm"
-#   base_instance_name         = "webapp"
-#   region                     = var.region
-
-#   version {
-#     instance_template = google_compute_region_instance_template.default.self_link
-#     name              = "primary"
-#   }
-
-#   target_size  = 3
-
-#   named_port {
-#     name = "http"
-#     port = 8080
-#   }
-#   auto_healing_policies {
-#     health_check      = google_compute_http_health_check.http_health_check.self_link
-#     initial_delay_sec = 300
-#   }
-# }
-# resource "google_compute_region_autoscaler" "foobar" {
-#   name   = "my-region-autoscaler"
-#   region = var.region
-#   target = google_compute_region_instance_group_manager.appserver.self_link
-
-#   autoscaling_policy {
-#     max_replicas    = 6
-#     min_replicas    = 3
-#     cooldown_period = 60
-
-#     cpu_utilization {
-#       target = 0.05
-#     }
-#   }
-# }
-# resource "google_compute_managed_ssl_certificate" "webapp_ssl_cert" {
-#   name = "webapp-ssl-cert"
-
-#   managed {
-#     domains = ["srivijaykalki.me"]
-#   }
-# }
-
-# resource "google_compute_global_address" "lb_ipv4_address" {
-
-#   name = "lb-ipv4-address"
-# }
-
-# resource "google_compute_global_forwarding_rule" "https_forwarding_rule" {
-#   name                  = "https-forwarding-rule"
-#   ip_protocol           = "TCP"
-#   load_balancing_scheme = "EXTERNAL"
-#   ip_address            = google_compute_global_address.lb_ipv4_address.address
-#   port_range            = "443"
-#   target                = google_compute_target_https_proxy.https_proxy.id
-# }
-
-# resource "google_compute_target_https_proxy" "https_proxy" {
-#   name     = "l7-xlb-target-http-proxy"
-#   provider = google
-#   url_map  = google_compute_url_map.default.id
-#   ssl_certificates = [
-#     google_compute_managed_ssl_certificate.webapp_ssl_cert.name
-#   ]
-#   depends_on = [
-#     google_compute_managed_ssl_certificate.webapp_ssl_cert
-#   ]
-# }
-
-# # url map
-# resource "google_compute_url_map" "default" {
-#   name            = "l7-xlb-url-map"
-#   provider        = google
-#   default_service = google_compute_backend_service.webapp_backend.id
-# }
-
-# resource "google_compute_backend_service" "webapp_backend" {
-#   name                            = "webapp-backend"
-#   protocol                        = "HTTP"
-#   port_name                       = "http"
-#   health_checks                   = [google_compute_http_health_check.http_health_check.id]
-#   load_balancing_scheme           = "EXTERNAL"
-#   timeout_sec                     = 10
-#   enable_cdn                      = false
-#   connection_draining_timeout_sec = 300
-#   backend {
-#     group           = google_compute_region_instance_group_manager.appserver.instance_group
-#     balancing_mode  = "UTILIZATION"
-#     capacity_scaler = 1.0
-#   }
-# }
-
-# # resource "google_compute_subnetwork" "proxy_only" {
-# #   name          = "proxy-only-subnet"
-# #   ip_cidr_range = "10.0.4.0/24"
-# #   network       = google_compute_network.vpc_network.id
-# #   purpose       = "REGIONAL_MANAGED_PROXY"
-# #   region        = var.region
-# #   role          = "ACTIVE"
-# # }
-
-# # resource "google_compute_region_backend_service" "default" {
-# #   name                  = "l7-xlb-backend-service"
-# #   region                = var.region
-# #   load_balancing_scheme = "EXTERNAL_MANAGED"
-# #   health_checks         = [google_compute_region_health_check.autohealing.id]
-# #   protocol              = "HTTP"
-# #   session_affinity      = "NONE"
-# #   timeout_sec           = 30
-# #   backend {
-# #     group           = google_compute_region_instance_group_manager.appserver.instance_group
-# #     balancing_mode  = "UTILIZATION"
-# #     capacity_scaler = 1.0
-# #   }
-# # }
-
-# # resource "google_compute_region_url_map" "default" {
-# #   name            = "regional-l7-xlb-map"
-# #   region          = var.region
-# #   default_service = google_compute_region_backend_service.default.id
-# # }
-
-# # resource "google_compute_region_target_http_proxy" "default" {
-# #   name    = "l7-xlb-proxy"
-# #   region  = var.region
-# #   url_map = google_compute_region_url_map.default.id
-# # }
-
-# # resource "google_compute_forwarding_rule" "default" {
-# #   name       = "l7-xlb-forwarding-rule"
-
-# #   depends_on = [google_compute_subnetwork.proxy_only]
-# #   region     = var.region
-# #   ip_protocol           = "TCP"
-# #   load_balancing_scheme = "EXTERNAL_MANAGED"
-# #   port_range            = "80"
-# #   target                = google_compute_region_target_http_proxy.default.id
-# #   network               = google_compute_network.vpc_network.id
-# #   network_tier          = "STANDARD"
-# # }
-# resource "google_compute_firewall" "allow_lb" {
-#   name    = "allow-lb-firewall"
-#   network = google_compute_network.vpc_network.id
-
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["8080", "443"]
-#   }
-
-#   source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
-#   source_tags   = var.vm_tag
-# }
-
-# resource "google_project_iam_binding" "instance_admin_binding" {
-#   project = var.projectId
-#   role    = "roles/compute.instanceAdmin.v1"
-
-#   members = [
-#     "serviceAccount:${google_service_account.autoscaler_service_account.email}",
-#   ]
-# }
-
-# resource "google_service_account" "autoscaler_service_account" {
-#   account_id   = "autoscaler"
-#   display_name = "autoscaler_service_account"
-# }
-
-# resource "google_compute_firewall" "default" {
-#   name          = "l7-xlb-fw-allow-hc"
-#   provider      = google
-#   direction     = "INGRESS"
-#   network       = google_compute_network.vpc_network.id
-#   source_ranges = var.firewall_src_range
-#   allow {
-#     protocol = "tcp"
-#   }
-#   target_tags = ["allow-health-check"]
-# }
-
-
-resource "google_compute_region_instance_template" "vm_instance_regional_template" {
-  name         = "appserver-template"
+resource "google_compute_region_instance_template" "appserver_template" {
+  name         = var.template_name
   machine_type = var.vm_instance_machine_type
 
 
@@ -559,6 +330,9 @@ resource "google_compute_region_instance_template" "vm_instance_regional_templat
     boot         = true
     disk_type    = var.vm_instance_disk_type
     disk_size_gb = var.vm_instance_disk_size_gb
+    disk_encryption_key {
+      kms_key_self_link = google_kms_crypto_key.vm_crypto_key.id
+    }
 
   }
 
@@ -577,98 +351,98 @@ resource "google_compute_region_instance_template" "vm_instance_regional_templat
     email  = google_service_account.vm_service_account.email
     scopes = ["cloud-platform"]
   }
-  tags = ["load-balanced-backend"]
+  tags = var.template_tags
 
   depends_on = [google_service_account.vm_service_account, google_sql_database_instance.main_primary]
 }
 
-resource "google_compute_region_instance_group_manager" "webapp_instance_group_manager" {
-  name = "my-instance-group-manager"
+resource "google_compute_region_instance_group_manager" "webapp_instance_grp" {
+  name = var.instance_grp_name
   named_port {
-    name = "http"
-    port = 8080
+    name = var.http_named_port_name
+    port = var.http_named_port_port
   }
   version {
     name              = "primary"
-    instance_template = google_compute_region_instance_template.vm_instance_regional_template.id
+    instance_template = google_compute_region_instance_template.appserver_template.id
   }
 
-  base_instance_name = "my-custom-vm"
-  target_size        = 2
+  base_instance_name = var.base_instance_name
+  target_size        = var.instance_grp_target_size
 
   auto_healing_policies {
     health_check      = google_compute_http_health_check.webapp_http_health_check.id
-    initial_delay_sec = 300
+    initial_delay_sec = var.auto_healing_policies_initial_delay_sec
   }
 }
 
 resource "google_compute_region_autoscaler" "wepapp_auto_scaler" {
-  name   = "my-auto-scaler"
+  name   = var.autoscaler_name
   region = var.region
-  target = google_compute_region_instance_group_manager.webapp_instance_group_manager.id
+  target = google_compute_region_instance_group_manager.webapp_instance_grp.id
 
   autoscaling_policy {
-    max_replicas    = 6
-    min_replicas    = 3
-    cooldown_period = 60
+    max_replicas    = var.max_replicas
+    min_replicas    = var.min_replicas
+    cooldown_period = var.cooldown_period
 
     cpu_utilization {
-      target = 0.05 # 5% CPU utilization
+      target = var.target_cpu_utilization
     }
   }
 
-  depends_on = [google_compute_region_instance_group_manager.webapp_instance_group_manager]
+  depends_on = [google_compute_region_instance_group_manager.webapp_instance_grp]
 }
 
-resource "google_compute_global_address" "load_balancer_compute_address" {
+resource "google_compute_global_address" "load_balancer_address" {
 
-  name = "load-balancer-ipv4-address"
+  name = var.reserved_ip_address_name
 }
 
 
 resource "google_compute_http_health_check" "webapp_http_health_check" {
-  name                = "http-health-check"
-  check_interval_sec  = 60
-  timeout_sec         = 5
-  healthy_threshold   = 2
-  unhealthy_threshold = 2
-  port                = 8080
-  request_path        = "/healthz"
+  name                = var.http_health_check_name
+  check_interval_sec  = var.check_interval_sec
+  timeout_sec         = var.health_check_timeout_seconds
+  healthy_threshold   = var.healthy_threshold
+  unhealthy_threshold = var.unhealthy_threshold
+  port                = var.health_check_port
+  request_path        = var.health_check_request_path
 }
 
 resource "google_compute_backend_service" "loadbalancer_backend_service" {
-  name                            = "load-balancer-backend-service"
-  protocol                        = "HTTP"
-  port_name                       = "http"
+  name                            = var.loadbalancer_backend_service_name
+  protocol                        = var.loadbalancer_protocol_name
+  port_name                       = var.http_named_port_name
   health_checks                   = [google_compute_http_health_check.webapp_http_health_check.id]
-  load_balancing_scheme           = "EXTERNAL"
-  timeout_sec                     = 10
+  load_balancing_scheme           = var.load_balancing_scheme
+  timeout_sec                     = var.backendtimeout_sec
   enable_cdn                      = true
-  connection_draining_timeout_sec = 300
+  connection_draining_timeout_sec = var.connection_draining_timeout_sec
   backend {
-    group           = google_compute_region_instance_group_manager.webapp_instance_group_manager.instance_group
-    balancing_mode  = "UTILIZATION"
+    group           = google_compute_region_instance_group_manager.webapp_instance_grp.instance_group
+    balancing_mode  = var.loadbalancer_backend_balancing_mode
     capacity_scaler = 1.0
   }
 }
 
 resource "google_compute_url_map" "compute_url_map" {
-  name            = "my-url-map"
+  name            = var.compute_url_map_name
   provider        = google
   default_service = google_compute_backend_service.loadbalancer_backend_service.id
 }
 
 resource "google_compute_managed_ssl_certificate" "webapp_ssl_cert" {
-  name = "webapp-ssl-cert"
+  name = var.webapp_ssl_cert_name
 
   managed {
-    domains = ["srivijaykalki.me"]
+    domains = var.ssl_certificate_managed_domains
   }
 }
 
 
 resource "google_compute_target_https_proxy" "my_target_http_proxy" {
-  name     = "load-balancer-proxy"
+  name     = var.loadbalancer_proxy_name
   provider = google
   url_map  = google_compute_url_map.compute_url_map.id
   ssl_certificates = [
@@ -680,15 +454,15 @@ resource "google_compute_target_https_proxy" "my_target_http_proxy" {
 }
 
 resource "google_compute_global_forwarding_rule" "https_forwarding_rule" {
-  name                  = "https-forwarding-rule"
-  ip_protocol           = "TCP"
-  load_balancing_scheme = "EXTERNAL"
-  ip_address            = google_compute_global_address.load_balancer_compute_address.address
-  port_range            = "443"
+  name                  = var.forwarding_rule_name
+  ip_protocol           = var.forwarding_rule_ip_protocol
+  load_balancing_scheme = var.forwarding_rule_load_balancing_scheme
+  ip_address            = google_compute_global_address.load_balancer_address.address
+  port_range            = var.forwarding_rule_port_range
   target                = google_compute_target_https_proxy.my_target_http_proxy.id
 
   depends_on = [google_compute_target_https_proxy.my_target_http_proxy,
-  google_compute_global_address.load_balancer_compute_address, google_compute_network.vpc_network]
+  google_compute_global_address.load_balancer_address, google_compute_network.vpc_network]
 
 }
 
@@ -701,33 +475,31 @@ resource "google_project_iam_binding" "instance_admin_binding" {
   ]
 }
 resource "google_compute_firewall" "allow_rule" {
-  name        = var.allow_firewall_name
-  network     = google_compute_network.vpc_network.self_link
-  source_tags = var.vm_tag
+  name    = var.allow_firewall_name
+  network = google_compute_network.vpc_network.self_link
+  # source_tags = var.vm_tag
 
   allow {
     protocol = var.allow_protocol
     ports    = var.allowed_port_list
   }
 
-  source_ranges = var.firewall_src_range
+  source_ranges = [google_compute_global_address.load_balancer_address.address]
   priority      = var.allow_firewall_rule_priority
-  target_tags   = ["load-balanced-backend"]
+  target_tags   = var.allow_rule_target_tag
 }
 
 resource "google_compute_firewall" "allow_rule_health_check" {
-  name = "fw-allow-health-check"
+  name = var.allow_rule_health_check_name
   allow {
-    protocol = "tcp"
+    protocol = var.allow_rule_health_check_protocol
   }
-  direction     = "INGRESS"
+  direction     = var.allow_rule_health_check_direction
   network       = google_compute_network.vpc_network.self_link
   priority      = var.allow_firewall_rule_priority
-  source_ranges = var.firewall_src_range
-  target_tags   = ["load-balanced-backend"]
+  source_ranges = var.allow_rule_health_check_source_ranges
+  target_tags   = var.allow_rule_health_check_target_tags
 }
-
-
 resource "google_compute_firewall" "deny_rule" {
   name    = var.deny_firewall_name
   network = google_compute_network.vpc_network.self_link
@@ -737,4 +509,75 @@ resource "google_compute_firewall" "deny_rule" {
   }
 
   source_ranges = var.firewall_src_range
+}
+
+resource "google_compute_firewall" "allow_lb" {
+  name    = var.allow_lb_firewall_name
+  network = google_compute_network.vpc_network.id
+
+  allow {
+    protocol = var.allow_lb_firewall_protocol
+    ports    = var.allow_lb_firewall_ports
+  }
+
+  source_ranges = var.allow_lb_firewall_source_ranges
+  source_tags   = var.allow_lb_firewall_source_tags
+}
+
+# Create a Key Ring
+resource "google_kms_key_ring" "key_ring" {
+  name     = "kms-key-rings-${uuid()}"
+  location = var.region
+}
+resource "google_kms_crypto_key" "cloudsql_crypto_key" {
+  name            = var.cloudsql_crypto_key_name
+  key_ring        = google_kms_key_ring.key_ring.id
+  rotation_period = var.cloudsql_crypto_key_rotation_period # 30 days
+}
+resource "google_project_service_identity" "gcp_sa_cloud_sql" {
+  provider = google-beta
+  project  = var.projectId
+  service  = var.cloudsql_service_identity
+}
+
+resource "google_kms_crypto_key_iam_binding" "crypto_key" {
+  provider      = google-beta
+  crypto_key_id = google_kms_crypto_key.cloudsql_crypto_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = [
+    "serviceAccount:${google_project_service_identity.gcp_sa_cloud_sql.email}",
+  ]
+}
+
+resource "google_kms_crypto_key" "vm_crypto_key" {
+  name            = var.vm_crypto_key_name
+  key_ring        = google_kms_key_ring.key_ring.id
+  rotation_period = var.vm_crypto_key_rotation_period # 30 days
+}
+
+resource "google_kms_crypto_key_iam_binding" "vm_crypto_key" {
+  provider      = google-beta
+  crypto_key_id = google_kms_crypto_key.vm_crypto_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+  members = var.vm_crypto_key_members
+}
+
+# Create a CMEK for Cloud Storage Buckets
+resource "google_kms_crypto_key" "storage_crypto_key" {
+  name            = var.storage_crypto_key_name
+  key_ring        = google_kms_key_ring.key_ring.id
+  rotation_period = var.storage_crypto_key_rotation_period # 30 days
+}
+
+data "google_storage_project_service_account" "gcs_account" {
+}
+
+resource "google_kms_crypto_key_iam_binding" "binding" {
+  crypto_key_id = google_kms_crypto_key.storage_crypto_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  members = [
+    "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
+  ]
 }
